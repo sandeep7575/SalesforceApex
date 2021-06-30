@@ -1,0 +1,49 @@
+public class updateDataEngine implements Schedulable {
+    
+    public void execute(SchedulableContext sc)
+    {
+        updateData();
+    }
+
+    @future
+    public static void updateData() 
+    {      
+        try {
+        
+            String file_title = System.Label.file_name; // File name from the custom label.
+            
+            //Read the latest version of the file and process it.
+            List<ContentVersion> files = [SELECT Id, Title, IsLatest, VersionData FROM ContentVersion WHERE Title = :file_title AND IsLatest = true];
+            String files_txt = files[0].VersionData.toString();
+            String[] filelines = new String[]{};
+            filelines = files_txt.split('\n');
+            
+            //Process the read file and udpate the data in accounts.
+            List<Account> accstoupload = new List<Account>();
+            Map<String, Account> allAccounts = new Map<String, Account>(); 
+            List<Account> LiveAccounts = [Select Id, Name, field1, field2 from Account WHERE Status__c = 'picklist_value1']; 
+            for(Account currentAccount : LiveAccounts) 
+            {     
+                String Key = currentAccount.Name;
+                allAccounts.put(Key, currentAccount);          
+            }
+            for (Integer i=1;i<filelines.size();i++)
+            {
+                String[] inputvalues = new String[]{};
+                inputvalues = filelines[i].split(',');                    
+                if(allAccounts.containsKey(inputvalues[0])) {
+                    Account acc = allAccounts.get(inputvalues[0]);
+                    acc.field1 = decimal.valueOf(inputvalues[4]);
+                    acc.field2 = decimal.valueOf(inputvalues[5]);  
+                    accstoupload.add(acc);
+                }  
+            }        
+            update accstoupload;
+           }
+        
+        catch (Exception e){
+            new ExceptionUtils(e);
+            System.debug('An exception has occured: ' + e.getMessage());
+        }
+    }
+}
